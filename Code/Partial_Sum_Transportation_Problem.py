@@ -2,8 +2,23 @@
 Code to define a transportation problem and a partial sum transportation problem
 """
 from __future__ import division
+from itertools import permutations
 from openopt import NLP,LP
 from numpy import *
+
+def permutation_of_cost_function(r,s,c):
+    m=len(r)
+    s=len(s)
+    output=[[] for i in range(m)]
+    for e in output:
+        for i in range(s):
+            e.append(c.pop(0))
+    output=permutations(output)
+    r=[]
+    for e in output:
+        e=[i for k in e for i in k]
+        r.append(e)
+    return r
 
 class Problem():
     def __init__(self,r,s,cost_matrix):
@@ -31,21 +46,6 @@ class Problem():
         else:
             print "Invalid problem"
 
-    def row_sum(self,matrix):
-        r=[0 for i in range(self.m)]
-        k=0
-        for e in matrix:
-            r[k/self.n]+=e
-            k+=1
-        return r
-
-    def col_sum(self,matrix):
-        r=[0 for i in range(self.n)]
-        k=0
-        for e in matrix:
-            r[k%self.n]+=e
-            k+=1
-        return r
 
 class Transportation_Problem(Problem):
     def __init__(self,r,s,cost_matrix):
@@ -79,6 +79,24 @@ class Partial_Sum_Transportation_Problem(Problem):
                    r[j]=-1
                k+=1
 
+#Reverse row sum
+        for h in range(1,self.n):
+            k=0
+            for r in A[(self.n+(h-1)-1)*self.m:(self.n+h-1)*self.m]:
+               index=[self.n-1-j+k*self.n for j in range(h)]
+               for j in index:
+                   r[j]=-1
+               k+=1
+
+#First column sum
+        for h in range(1,self.m):
+            k=0
+            for r in A[2*self.m*(self.n-1)+(h-1)*self.n:2*self.m*(self.n-1)+h*self.n]:
+               index=[k+j*self.n for j in range(h)]
+               for j in index:
+                   r[j]=-1
+               k+=1
+
 #Reverse column sum
         for h in range(1,self.m):
             k=0
@@ -100,7 +118,13 @@ class Partial_Sum_Transportation_Problem(Problem):
 class Solution_Comparison():
     def __init__(self,r,s,c):
         self.Transportation_Solution=Transportation_Problem(r,s,c).solve()
-        self.Partial_Sum_Transportation_Solution=Partial_Sum_Transportation_Problem(r,s,c).solve()
+        [best_solution,best_cost]=Partial_Sum_Transportation_Problem(r,s,c).solve()
+        for e in permutation_of_cost_function(r,s,c):
+            print e
+            [candidate_solution,candidate_cost]=Partial_Sum_Transportation_Problem(r,s,c).solve()
+            if candidate_cost<best_cost:
+                [best_solution,best_cost]=[candidate_solution,candidate_cost]
+        self.Partial_Sum_Transportation_Solution=[best_solution,best_cost]
     def Costs(self):
         return [self.Transportation_Solution[1],self.Partial_Sum_Transportation_Solution[1]]
     def Solutions(self):
@@ -109,12 +133,30 @@ class Solution_Comparison():
         Partial_Sum_Solution=[round(e,precision) for e in self.Partial_Sum_Transportation_Solution[0]]
         return min(Partial_Sum_Solution)<0
 
-print "----"
-c=[100,1,1,100,100,1,1,1,100,1,1,10,1,10,1,1,1,10,1,10,10,1,10,1,100,1,1,100]
-r=[3,2,1,6,1,1,1]
-s=[6,2,1,6]
+#print "----"
+#c=[100,1,1,100,100,1,1,1,100,1,1,10,1,10,1,1,1,10,1,10,10,1,10,1,100,1,1,100]
+#r=[3,2,1,6,1,1,1]
+#s=[6,2,1,6]
+#
+#a=Solution_Comparison(r,s,c)
+#print a.Costs()
+#print a.Partial_Sum_Optimal()
 
-a=Solution_Comparison(r,s,c)
-print a.Costs()
-print a.Partial_Sum_Optimal()
+c=[1,1,2,1,2,1,2,1,2]
+r=[1,1,1]
+s=[1,1,1]
+#a=Partial_Sum_Transportation_Problem(r,s,c)
+#print a.solve()
+#print "----"
+for e in permutation_of_cost_function(r,s,c):
+    print "woof", e
+    a=Partial_Sum_Transportation_Problem(r,s,e)
+    print a.solve()
 
+#print "-----"
+#for e in  permutation_of_cost_function(r,s,c):
+    #print e
+#print "-----"
+#a=Solution_Comparison(r,s,c)
+#print a.Costs()
+#print a.Partial_Sum_Optimal()
