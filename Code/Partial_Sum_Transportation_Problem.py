@@ -1,11 +1,9 @@
 """
 Code to define a transportation problem and a partial sum transportation problem
 """
-
+from __future__ import division
 from openopt import NLP,LP
 from numpy import *
-
-
 
 class Problem():
     def __init__(self,r,s,cost_matrix):
@@ -29,7 +27,7 @@ class Problem():
                for j in index:
                    r[j]=1
                k+=1
-            self.Aeq=Aeq
+            self.Aeq=mat(Aeq)
         else:
             print "Invalid problem"
 
@@ -49,73 +47,74 @@ class Problem():
             k+=1
         return r
 
-
-
 class Transportation_Problem(Problem):
     def __init__(self,r,s,cost_matrix):
         Problem.__init__(self,r,s,cost_matrix)
         self.cost_function=array(cost_matrix)
         self.lb=[0 for k in range(self.m*self.n)]
-        self.Aeq=mat(self.Aeq)
     def evaluate(self,matrix):
         return self.cost_function(matrix)
     def solve(self):
         p=LP(self.cost_function,Aeq=self.Aeq,beq=self.beq,lb=self.lb)
         r=p.solve('pclp')
-        return r.xf,r.ff
-#print ""
-#print "--- Testing ---"
-#print ""
+        return [r.xf,r.ff]
 
+class Partial_Sum_Transportation_Problem(Problem):
+    def __init__(self,r,s,cost_matrix):
+        Problem.__init__(self,r,s,cost_matrix)
+        self.cost_function=lambda a: sum([abs(a[k])*cost_matrix[k] for k in range(self.m*self.n)])
+        self.lb=[-max(r[k//self.n],s[k%self.n]) for k in range(self.m*self.n)]
+        self.ub=[max(r[k//self.n],s[k%self.n]) for k in range(self.m*self.n)]
+        tau=sum(self.s)
+        self.initial_solution=[r[k//self.n]*s[k%self.n]/tau for k in range(self.m*self.n)]
+        A=[[0 for i in range(self.m*self.n)] for j in range(2*self.m*(self.n-1)+2*self.n*(self.m-1))]
+        b=[0  for j in range(2*self.m*(self.n-1)+2*self.n*(self.m-1))]
 
-#f = array([15,8,80])
-#A = mat('1 2 3; 8 15 80; 8 80 15; -100 -10 -1') # numpy.ndarray is also allowed
-#b = [15, 80, 150, -800] # numpy.ndarray, matrix etc are also allowed
-#Aeq = mat('80 8 15; 1 10 100') # numpy.ndarray is also allowed
-#beq = (750, 80)
+#First row sum
+        for h in range(1,self.n):
+            k=0
+            for r in A[(h-1)*self.m:h*self.m]:
+               index=[j+k*self.n for j in range(h)]
+               for j in index:
+                   r[j]=-1
+               k+=1
 
-#lb = [4, -80, -inf]
-#ub = [inf, -8, inf]
-#p = LP(f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
-#or p = LP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
+#Reverse column sum
+        for h in range(1,self.m):
+            k=0
+            for r in A[2*self.m*(self.n-1)+(self.m-1)*self.n+(h-1)*self.n:2*self.m*(self.n-1)+(self.m-1)*self.n+h*self.n]:
+               index=[self.n*self.m-1-k-j*self.n for j in range(h)]
+               for j in index:
+                   r[j]=-1
+               k+=1
 
-#r = p.minimize('glpk') # CVXOPT must be installed
-#r = p.minimize('lpSolve') # lpsolve must be installed
-#r = p.minimize('pclp')
-#search for max: r = p.maximize('glpk') # CVXOPT & glpk must be installed
-#r = p.minimize('nlp:ralg', ftol=1e-7, xtol=1e-7, goal='min', plot=1)
+        self.A=A
+        self.b=b
+    def evaluate(self,matrix):
+        return self.cost_function(matrix)
+    def solve(self):
+        p=NLP(self.cost_function,self.initial_solution,Aeq=self.Aeq,beq=self.beq,A=self.A,b=self.b,lb=self.lb,ub=self.ub)
+        r=p.solve('ralg')
+        return [r.xf,r.ff]
 
-#print('objFunValue: %f' % r.ff) # should print 204.48841578
-#print('x_opt: %s' % r.xf) # should print [ 9.89355041 -8.
-
-
-
-#print""
-#print "---- Test 2 ---"
-#print""
-#Aeq=mat([[1,1,0,0],[0,0,1,1],[1,0,1,0],[0,1,0,1]])
-#beq=array([1,1,1,1])
-#f=array([1,1,3,1])
-#lb=[0,0,0,0]
-#ub=[1,1,1,1]
-#p=LP(f,beq=beq,Aeq=Aeq,lb=lb,ub=ub)
-#r=p.minimize('pclp')
-#print('objFunValue: %f' % r.ff) # should print 204.48841578
-#print('x_opt: %s' % r.xf) # should print [ 9.89355041 -8.
-
-
-
-
-
+class Solution_Comparison():
+    def __init__(self,r,s,c):
+        self.Transportation_Solution=Transportation_Problem(r,s,c).solve()
+        self.Partial_Sum_Transportation_Solution=Partial_Sum_Transportation_Problem(r,s,c).solve()
+    def Costs(self):
+        return [self.Transportation_Solution[1],self.Partial_Sum_Transportation_Solution[1]]
+    def Solutions(self):
+        return [self.Transportation_Solution[0],self.Partial_Sum_Transportation_Solution[0]]
+    def Partial_Sum_Optimal(self,precision=2):
+        Partial_Sum_Solution=[round(e,precision) for e in self.Partial_Sum_Transportation_Solution[0]]
+        return min(Partial_Sum_Solution)<0
 
 print "----"
-test=Transportation_Problem([1,1],[1,1],[1,1,3,1])
-print test.solve()
-test=Transportation_Problem([1,1,1],[1,2],[1,2,3,4,5,6])
-print test.solve()
-test=Transportation_Problem([1,1,3,1],[1,2,2,1],[1,2,3,4,5,6,1,2,3,4,5,6,4,3,2,1])
-print test.solve()
+c=[100,1,1,100,100,1,1,1,100,1,1,10,1,10,1,1,1,10,1,10,10,1,10,1,100,1,1,100]
+r=[3,2,1,6,1,1,1]
+s=[6,2,1,6]
 
-#class Partial_Sum_Transportation_Problem(self,cost_matrix):
-
+a=Solution_Comparison(r,s,c)
+print a.Costs()
+print a.Partial_Sum_Optimal()
 
