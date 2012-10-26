@@ -188,23 +188,26 @@ def Run_Experiment(Max_m,Max_n,Max_tau_value,Max_c_value,row_permute=False,csv_f
     number_of_wins=0
     while True:
         a=Comparison_Experiment(Max_m,Max_n,Max_tau_value,Max_c_value,row_permute)
-        b=a.Compare_instance()
-        if b:
-            k+=1
-            print ""
-            print "------------------------------------------"
-            print "Instance number %s completed."%k
-            print "\tm:",a.m
-            print "\tn:",a.n
-            if b[0]:
-                number_of_wins+=1
-            print "\tNumber of wins:",number_of_wins
-            print "------------------------------------------"
-            print ""
-            outfile=open(csv_file,"a")
-            writefile=csv.writer(outfile)
-            writefile.writerow(b)
-            outfile.close()
+        try:
+            b=a.Compare_instance()
+            if b:
+                k+=1
+                print ""
+                print "------------------------------------------"
+                print "Instance number %s completed."%k
+                print "\tm:",a.m
+                print "\tn:",a.n
+                if b[0]:
+                    number_of_wins+=1
+                print "\tNumber of wins:",number_of_wins
+                print "------------------------------------------"
+                print ""
+                outfile=open(csv_file,"a")
+                writefile=csv.writer(outfile)
+                writefile.writerow(b)
+                outfile.close()
+        except:
+            pass
 
 #Run_Experiment(50,50,100,100,True)
-Run_Experiment(5,5,100,100,False)
+Run_Experiment(50,50,100,100,False)
