@@ -1,12 +1,17 @@
-"""
-Code to define a transportation problem and a partial sum transportation problem
-"""
+#"""
+#Code to define a transportation problem and a partial sum transportation problem
+#"""
 from __future__ import division
 from itertools import permutations
 from openopt import NLP,LP
 from numpy import *
+from random import random,randint
+import csv
 
-def permutation_of_cost_function(r,s,c):
+def row_permutation_of_cost_function(r,s,c):
+    """
+    This function is used at a later stage to permute rows of cost function
+    """
     m=len(r)
     s=len(s)
     output=[[] for i in range(m)]
@@ -21,6 +26,9 @@ def permutation_of_cost_function(r,s,c):
     return r
 
 class Problem():
+    """
+    This is the main class for our problems, it contains the equality constraints.
+    """
     def __init__(self,r,s,cost_matrix):
         if sum(r)==sum(s):
             self.m=len(r)
@@ -31,12 +39,14 @@ class Problem():
             self.beq=tuple(r+s)
             Aeq=[[0 for i in range(self.m*self.n)] for j in range(self.m+self.n)]
             k=0
+            #Code for row sums:
             for r in Aeq[:self.m]:
                index=range(k,k+self.n)
                for j in index:
                    r[j]=1
                k+=self.n
             k=0
+            #Code for col sums:
             for r in Aeq[self.m:]:
                index=[k+j*self.n for j in range(self.m)]
                for j in index:
@@ -48,6 +58,9 @@ class Problem():
 
 
 class Transportation_Problem(Problem):
+    """
+    This class inherits from previous problem class giving methods for solving as an LP and also including positivity constraints.
+    """
     def __init__(self,r,s,cost_matrix):
         Problem.__init__(self,r,s,cost_matrix)
         self.cost_function=array(cost_matrix)
@@ -56,10 +69,14 @@ class Transportation_Problem(Problem):
         return self.cost_function(matrix)
     def solve(self):
         p=LP(self.cost_function,Aeq=self.Aeq,beq=self.beq,lb=self.lb)
+        p.iprint = -1
         r=p.solve('pclp')
         return [r.xf,r.ff]
 
 class Partial_Sum_Transportation_Problem(Problem):
+    """
+    This class inherits from Problem class giving methods for solving as an NLP and also including partial sum positivity constraints.
+    """
     def __init__(self,r,s,cost_matrix):
         Problem.__init__(self,r,s,cost_matrix)
         self.cost_function=lambda a: sum([abs(a[k])*cost_matrix[k] for k in range(self.m*self.n)])
@@ -112,18 +129,22 @@ class Partial_Sum_Transportation_Problem(Problem):
         return self.cost_function(matrix)
     def solve(self):
         p=NLP(self.cost_function,self.initial_solution,Aeq=self.Aeq,beq=self.beq,A=self.A,b=self.b,lb=self.lb,ub=self.ub)
+        p.iprint = -1
         r=p.solve('ralg')
         return [r.xf,r.ff]
 
 class Solution_Comparison():
-    def __init__(self,r,s,c):
+    """
+    This defines a class that compares two approaches to solving a given problem.
+    """
+    def __init__(self,r,s,c,row_permute=True):
         self.Transportation_Solution=Transportation_Problem(r,s,c).solve()
         [best_solution,best_cost]=Partial_Sum_Transportation_Problem(r,s,c).solve()
-        for e in permutation_of_cost_function(r,s,c):
-            print e
-            [candidate_solution,candidate_cost]=Partial_Sum_Transportation_Problem(r,s,c).solve()
-            if candidate_cost<best_cost:
-                [best_solution,best_cost]=[candidate_solution,candidate_cost]
+        if row_permute:
+            for e in row_permutation_of_cost_function(r,s,c):
+                [candidate_solution,candidate_cost]=Partial_Sum_Transportation_Problem(r,s,e).solve()
+                if candidate_cost<best_cost:
+                    [best_solution,best_cost]=[candidate_solution,candidate_cost]
         self.Partial_Sum_Transportation_Solution=[best_solution,best_cost]
     def Costs(self):
         return [self.Transportation_Solution[1],self.Partial_Sum_Transportation_Solution[1]]
@@ -133,30 +154,57 @@ class Solution_Comparison():
         Partial_Sum_Solution=[round(e,precision) for e in self.Partial_Sum_Transportation_Solution[0]]
         return min(Partial_Sum_Solution)<0
 
-#print "----"
-#c=[100,1,1,100,100,1,1,1,100,1,1,10,1,10,1,1,1,10,1,10,10,1,10,1,100,1,1,100]
-#r=[3,2,1,6,1,1,1]
-#s=[6,2,1,6]
-#
-#a=Solution_Comparison(r,s,c)
-#print a.Costs()
-#print a.Partial_Sum_Optimal()
+class Comparison_Experiment():
+    """
+    This defines a class of experiments, the compare_instance method generates a random instance.
+    """
+    def __init__(self,Max_m,Max_n,Max_tau_value,Max_c_value,row_permute=False):
+        self.Max_m=Max_m
+        self.Max_n=Max_n
+        self.Max_tau_value=Max_tau_value
+        self.Max_c_value=Max_c_value
+        self.row_permute=row_permute
+    def Compare_instance(self):
+        m=randint(3,self.Max_m)
+        n=randint(3,self.Max_n)
+        self.m=m
+        self.n=n
+        tau=randint(1,self.Max_tau_value)
+        r=[random() for e in range(m)]
+        r=[round(tau*e/sum(r),2) for e in r]
+        s=[random() for e in range(n)]
+        s=[round(sum(r)*e/sum(s),2) for e in s]
+        c=[self.Max_c_value*random() for e in range(m*n)]
+        if sum(r)==sum(s):
+            result=Solution_Comparison(r,s,c,self.row_permute)
+            return [result.Partial_Sum_Optimal(),m,n,r,s,c,tau,result.Costs()[0],result.Costs()[1],[e for e in result.Solutions()[0]],[e for e in result.Solutions()[1]]]
+        return False
 
-c=[1,1,2,1,2,1,2,1,2]
-r=[1,1,1]
-s=[1,1,1]
-#a=Partial_Sum_Transportation_Problem(r,s,c)
-#print a.solve()
-#print "----"
-for e in permutation_of_cost_function(r,s,c):
-    print "woof", e
-    a=Partial_Sum_Transportation_Problem(r,s,e)
-    print a.solve()
+def Run_Experiment(Max_m,Max_n,Max_tau_value,Max_c_value,row_permute=False,csv_file="Output_file.csv"):
+    """
+    This function runs experiments (until interrupted) output to a csv file.
+    """
+    k=0
+    number_of_wins=0
+    while True:
+        a=Comparison_Experiment(Max_m,Max_n,Max_tau_value,Max_c_value,row_permute)
+        b=a.Compare_instance()
+        if b:
+            k+=1
+            print ""
+            print "------------------------------------------"
+            print "Instance number %s completed."%k
+            print "\tm:",a.m
+            print "\tn:",a.n
+            if b[0]:
+                number_of_wins+=1
+            print "\tNumber of wins:",number_of_wins
+            print "------------------------------------------"
+            print ""
+            outfile=open(csv_file,"a")
+            writefile=csv.writer(outfile)
+            writefile.writerow(b)
+            outfile.close()
 
-#print "-----"
-#for e in  permutation_of_cost_function(r,s,c):
-    #print e
-#print "-----"
-#a=Solution_Comparison(r,s,c)
-#print a.Costs()
-#print a.Partial_Sum_Optimal()
+#Run_Experiment(50,50,100,100,True)
+Run_Experiment(5,5,100,100,False)
