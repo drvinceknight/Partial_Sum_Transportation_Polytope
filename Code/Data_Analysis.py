@@ -17,7 +17,8 @@ number=len(data)
 for row in data:
     if eval(row[0]):
         wins+=1
-
-print "Total files:",number
+print "---------------------"
+print "Total instances:",number
 print "Total wins:",wins
 print "Success rate:",wins/number
+print "---------------------"
