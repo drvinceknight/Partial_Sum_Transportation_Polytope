@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 #"""
 #Code to define a transportation problem and a partial sum transportation problem
 #"""
