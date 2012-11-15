@@ -45,16 +45,16 @@ for row in data:
     running_win_percentage.append(wins/instances)
 
 
-number_of_wins_array=[[0 for n in range(max_n)] for m in range(max_m)]
+number_of_wins_array=[[0 for m in range(max_m)] for n in range(max_n)]
 for e in number_of_wins_dictionary:
     l=eval(e)
-    number_of_wins_array[l[0]-1][l[1]-1]=number_of_wins_dictionary[e]/number_of_attempts_dictionary[e]
+    number_of_wins_array[l[1]-1][l[0]-1]=number_of_wins_dictionary[e]/number_of_attempts_dictionary[e]
 
 x_attempt=[]
 y_attempt=[]
 for e in max_n_dictionary:
-    x_attempt.append(e)
-    y_attempt.append(max_n_dictionary[e])
+    x_attempt.append(e-1)
+    y_attempt.append(max_n_dictionary[e]-1)
 
 plt.figure()
 plt.plot(x_attempt,y_attempt,color="red",label="Region Explored")
