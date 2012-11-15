@@ -41,7 +41,6 @@ for key in max_data:
     line_maxn.append(max_data[key])
 
 plt.figure()
-plt.imshow([[1,2],[2,3]])
 plt.plot(line_m,line_maxn,label="Region Explored",color="black")
 plt.scatter(scatter_m,scatter_n, label="Wins (%s/%s)"%(wins,number))
 plt.xlabel("m")
